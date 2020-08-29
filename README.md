@@ -248,7 +248,7 @@ Tiến hành đặt breakpoint ngay dòng `v8()` và debug, tới breakpoint nh�
 
 ![Screenshot](/img3.png?raw=true "Screenshot")
 
-Tiếp tục nhấn F8 cho tới đoạn `call    near ptr unk_1A0016`, nhấn F7. Hàm unk_1A0016 như sau:
+Tiếp tục nhấn F8 cho tới đoạn `call    near ptr unk_1A0016`, nhấn F7 -> nhấn P -> nhấn F5, thu được hàm `unk_1A0016` như sau:
 
 ```C++
 char __stdcall sub_1A0016(_DWORD *a1)
@@ -764,7 +764,7 @@ LABEL_60:
   return v9;
 }
 ```
-Có vẻ đoạn chương trình đã bị obfuscate, tuy nhiên chương trình có gọi một số hàm thông qua biến. Debug tới những lệnh gọi này và nhấn F7, chúng ta có thể biết nó gọi hàm gì:
+Có vẻ đoạn chương trình đã bị obfuscate nên khá rối rắm, tuy nhiên chương trình có gọi một số hàm thông qua biến, vì thế chúng ta có thể debug tới những lệnh gọi này và nhấn F7 sẽ biết nó gọi hàm gì:
 
 ![Screenshot](/img4.png?raw=true "Screenshot")
 
