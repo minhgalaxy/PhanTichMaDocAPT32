@@ -772,7 +772,7 @@ Có vẻ đoạn chương trình đã bị obfuscate nên khá rối rắm, tuy 
 
 -> `v135` chính là địa chỉ của hàm `VirtualAlloc` nằm trong file `kernel32.dll`. 
 
-Sau khi tạo vùng nhớ, mã độc lại copy shellcode mới vào biến `v9`. Bằng cách debug tương tự, chúng ta có thể nhận ra `v136` là hàm `CreateThread` và `v137` là hàm `WaitForSingleObject`. Vậy có nghĩa là mã độc tạo thread mới gọi tới địa chỉ của shellcode, sau đó gọi hàm `WaitForSingleObject` để chờ thread chạy xong.
+Sau khi tạo vùng nhớ, mã độc lại copy shellcode mới vào biến `v9`. Bằng cách debug tương tự, chúng ta có thể thấy `v136` là hàm `CreateThread` và `v137` là hàm `WaitForSingleObject`. Vậy có nghĩa là mã độc tạo thread mới gọi tới địa chỉ của shellcode, sau đó gọi hàm `WaitForSingleObject` để chờ thread chạy xong.
 
 Để có thể đặt breakpoint ở shellcode, chúng ta cần dừng chương trình ở ngay lệnh gọi hàm `CreateThread`
 
